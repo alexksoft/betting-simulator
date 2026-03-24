@@ -1,0 +1,58 @@
+services:
+
+  # ── DynamoDB Local ─────────────────────────────────────────────
+  dynamodb-local:
+    image: amazon/dynamodb-local:latest
+    container_name: betting-dynamodb
+    command: ["-jar", "DynamoDBLocal.jar", "-sharedDb", "-inMemory"]
+    ports:
+      - "8000:8000"
+
+  # ── DynamoDB Table Init ────────────────────────────────────────
+  dynamodb-init:
+    image: amazon/aws-cli:latest
+    container_name: betting-dynamodb-init
+    depends_on:
+      - dynamodb-local
+    environment:
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+      AWS_DEFAULT_REGION: us-east-1
+    volumes:
+      - ./docker/init-dynamodb.sh:/init-dynamodb.sh:ro
+    entrypoint: ["/bin/sh", "/init-dynamodb.sh"]
+    restart: "no"
+
+  # ── Spring Boot Backend ────────────────────────────────────────
+  backend:
+    build:
+      context: ./backend
+      dockerfile: Dockerfile
+    container_name: betting-backend
+    depends_on:
+      dynamodb-init:
+        condition: service_completed_successfully
+    ports:
+      - "8080:8080"
+    environment:
+      SPRING_PROFILES_ACTIVE: local
+      AWS_ACCESS_KEY_ID: local
+      AWS_SECRET_ACCESS_KEY: local
+    healthcheck:
+      test: ["CMD-SHELL", "wget -qO- http://localhost:8080/actuator/health || exit 1"]
+      interval: 10s
+      timeout: 5s
+      retries: 10
+      start_period: 30s
+
+  # ── Angular Frontend ───────────────────────────────────────────
+  frontend:
+    build:
+      context: ./frontend
+      dockerfile: Dockerfile
+    container_name: betting-frontend
+    depends_on:
+      backend:
+        condition: service_healthy
+    ports:
+      - "4200:80"

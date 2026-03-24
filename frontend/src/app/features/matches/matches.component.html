@@ -1,0 +1,135 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Matches</h1>
+    <button class="btn btn-primary" (click)="showCreateForm = !showCreateForm">
+      {{ showCreateForm ? 'Cancel' : '+ Create Match' }}
+    </button>
+  </div>
+
+  <div *ngIf="message" class="alert alert-info">{{ message }}</div>
+
+  <!-- Create Match Form -->
+  <div *ngIf="showCreateForm" class="card form-card">
+    <h3>New Match</h3>
+    <form (ngSubmit)="createMatch()">
+      <div class="form-row">
+        <div class="form-group">
+          <label>Sport</label>
+          <input [(ngModel)]="newMatch.sport" name="sport" required placeholder="Football" />
+        </div>
+        <div class="form-group">
+          <label>Start Time</label>
+          <input type="datetime-local" [(ngModel)]="newMatch.startTime" name="startTime" required />
+        </div>
+      </div>
+      <div class="form-row">
+        <div class="form-group">
+          <label>Home Team</label>
+          <input [(ngModel)]="newMatch.homeTeam" name="homeTeam" required placeholder="Arsenal" />
+        </div>
+        <div class="form-group">
+          <label>Away Team</label>
+          <input [(ngModel)]="newMatch.awayTeam" name="awayTeam" required placeholder="Chelsea" />
+        </div>
+      </div>
+      <div class="form-row odds-row">
+        <div class="form-group">
+          <label>Home Odds</label>
+          <input type="number" step="0.01" [(ngModel)]="newMatch.oddsHome" name="oddsHome" placeholder="1.80" />
+        </div>
+        <div class="form-group">
+          <label>Draw Odds</label>
+          <input type="number" step="0.01" [(ngModel)]="newMatch.oddsDraw" name="oddsDraw" placeholder="3.40" />
+        </div>
+        <div class="form-group">
+          <label>Away Odds</label>
+          <input type="number" step="0.01" [(ngModel)]="newMatch.oddsAway" name="oddsAway" placeholder="4.50" />
+        </div>
+      </div>
+      <button type="submit" class="btn btn-primary">Create Match</button>
+    </form>
+  </div>
+
+  <!-- Filter -->
+  <div class="filter-bar">
+    <select [(ngModel)]="statusFilter" (change)="loadMatches()">
+      <option value="">All Matches</option>
+      <option value="UPCOMING">Upcoming</option>
+      <option value="LIVE">Live</option>
+      <option value="FINISHED">Finished</option>
+    </select>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading matches...</div>
+
+  <!-- Match List -->
+  <div class="match-list" *ngIf="!loading">
+    <div *ngFor="let match of matches" class="match-card" [class.selected]="selectedMatch?.matchId === match.matchId">
+      <div class="match-header" (click)="selectMatch(match)">
+        <div class="match-teams">
+          <span class="sport-badge">{{ match.sport }}</span>
+          <strong>{{ match.homeTeam }} vs {{ match.awayTeam }}</strong>
+        </div>
+        <div class="match-meta">
+          <span class="status-badge" [class]="'status-' + match.status.toLowerCase()">{{ match.status }}</span>
+          <span class="match-time">{{ match.startTime | date:'dd MMM HH:mm' }}</span>
+        </div>
+      </div>
+
+      <!-- Odds Display -->
+      <div class="odds-display" *ngIf="match.oddsHome">
+        <div class="odds-item">
+          <span>{{ match.homeTeam }}</span>
+          <strong>{{ match.oddsHome }}</strong>
+        </div>
+        <div class="odds-item">
+          <span>Draw</span>
+          <strong>{{ match.oddsDraw }}</strong>
+        </div>
+        <div class="odds-item">
+          <span>{{ match.awayTeam }}</span>
+          <strong>{{ match.oddsAway }}</strong>
+        </div>
+      </div>
+
+      <!-- Result -->
+      <div class="match-result" *ngIf="match.result">
+        Result: <strong>{{ match.result | titlecase }}</strong>
+      </div>
+
+      <!-- Bet Slip -->
+      <div class="bet-slip" *ngIf="selectedMatch?.matchId === match.matchId && match.status !== 'FINISHED'">
+        <h4>Place Bet</h4>
+        <div class="form-row">
+          <div class="form-group">
+            <label>Bet Type</label>
+            <select [(ngModel)]="betType">
+              <option value="HOME_WIN">{{ match.homeTeam }} Win</option>
+              <option value="DRAW">Draw</option>
+              <option value="AWAY_WIN">{{ match.awayTeam }} Win</option>
+            </select>
+          </div>
+          <div class="form-group">
+            <label>Stake (£)</label>
+            <input type="number" [(ngModel)]="betStake" min="1" step="1" />
+          </div>
+        </div>
+        <div class="form-group" *ngIf="!getOddsForType(match)">
+          <label>Odds (enter manually)</label>
+          <input type="number" [(ngModel)]="customOdds" step="0.01" min="1.01" placeholder="e.g. 1.80" />
+        </div>
+        <div class="bet-summary">
+          <span>Odds: <strong>{{ effectiveOdds() || '—' }}</strong></span>
+          <span>Potential Win: <strong>£{{ (betStake * effectiveOdds()) | number:'1.2-2' }}</strong></span>
+        </div>
+        <button class="btn btn-success" (click)="placeBet()" [disabled]="!effectiveOdds() || effectiveOdds() <= 1">
+          Place Bet
+        </button>
+      </div>
+    </div>
+
+    <div *ngIf="matches.length === 0" class="empty-state">
+      No matches found. Create one above!
+    </div>
+  </div>
+</div>

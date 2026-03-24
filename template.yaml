@@ -1,0 +1,142 @@
+AWSTemplateFormatVersion: '2010-09-09'
+Transform: AWS::Serverless-2016-10-31
+Description: Betting Simulator - Serverless Backend
+
+Globals:
+  Function:
+    Timeout: 30
+    MemorySize: 512
+    Runtime: java17
+    Environment:
+      Variables:
+        AWS_REGION_NAME: !Ref AWS::Region
+        SPRING_PROFILES_ACTIVE: prod
+
+Resources:
+
+  # ─── Lambda Function ───────────────────────────────────────────────────────
+  BettingSimulatorFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: betting-simulator-api
+      Handler: com.bettingsim.LambdaHandler
+      CodeUri: backend/target/betting-simulator-backend-1.0.0.jar
+      Policies:
+        - DynamoDBCrudPolicy:
+            TableName: !Ref UsersTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref MatchesTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BetsTable
+        - DynamoDBCrudPolicy:
+            TableName: !Ref BankrollHistoryTable
+      Events:
+        ApiProxy:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BettingApi
+            Path: /{proxy+}
+            Method: ANY
+
+  # ─── API Gateway ───────────────────────────────────────────────────────────
+  BettingApi:
+    Type: AWS::Serverless::Api
+    Properties:
+      Name: betting-simulator-api
+      StageName: prod
+      Cors:
+        AllowMethods: "'GET,POST,PUT,DELETE,OPTIONS'"
+        AllowHeaders: "'Content-Type,Authorization'"
+        AllowOrigin: "'*'"
+
+  # ─── DynamoDB Tables ───────────────────────────────────────────────────────
+  UsersTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: betting-users
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: email
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: email-index
+          KeySchema:
+            - AttributeName: email
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  MatchesTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: betting-matches
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: matchId
+          AttributeType: S
+        - AttributeName: status
+          AttributeType: S
+      KeySchema:
+        - AttributeName: matchId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: status-index
+          KeySchema:
+            - AttributeName: status
+              KeyType: HASH
+          Projection:
+            ProjectionType: ALL
+
+  BetsTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: betting-bets
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: betId
+          AttributeType: S
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: placedAt
+          AttributeType: S
+      KeySchema:
+        - AttributeName: betId
+          KeyType: HASH
+      GlobalSecondaryIndexes:
+        - IndexName: userId-index
+          KeySchema:
+            - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: placedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+
+  BankrollHistoryTable:
+    Type: AWS::DynamoDB::Table
+    Properties:
+      TableName: betting-bankroll-history
+      BillingMode: PAY_PER_REQUEST
+      AttributeDefinitions:
+        - AttributeName: userId
+          AttributeType: S
+        - AttributeName: timestamp
+          AttributeType: S
+      KeySchema:
+        - AttributeName: userId
+          KeyType: HASH
+        - AttributeName: timestamp
+          KeyType: RANGE
+
+Outputs:
+  ApiUrl:
+    Description: API Gateway endpoint URL
+    Value: !Sub "https://${BettingApi}.execute-api.${AWS::Region}.amazonaws.com/prod"
+  FunctionArn:
+    Description: Lambda Function ARN
+    Value: !GetAtt BettingSimulatorFunction.Arn

@@ -1,0 +1,60 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>Dashboard</h1>
+    <div class="bankroll-badge">
+      💰 £{{ (auth.currentUser$ | async)?.bankroll | number:'1.2-2' }}
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading stats...</div>
+
+  <ng-container *ngIf="stats && !loading">
+    <!-- Stats Cards -->
+    <div class="stats-grid">
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.totalBets }}</div>
+        <div class="stat-label">Total Bets</div>
+      </div>
+      <div class="stat-card win">
+        <div class="stat-value">{{ stats.winRate | number:'1.1-1' }}%</div>
+        <div class="stat-label">Win Rate</div>
+      </div>
+      <div class="stat-card" [class.profit]="stats.roi >= 0" [class.loss]="stats.roi < 0">
+        <div class="stat-value">{{ stats.roi | number:'1.1-1' }}%</div>
+        <div class="stat-label">ROI</div>
+      </div>
+      <div class="stat-card" [class.profit]="stats.profitLoss >= 0" [class.loss]="stats.profitLoss < 0">
+        <div class="stat-value">{{ stats.profitLoss >= 0 ? '+' : '' }}£{{ stats.profitLoss | number:'1.2-2' }}</div>
+        <div class="stat-label">Profit / Loss</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.wonBets }}</div>
+        <div class="stat-label">Won</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.lostBets }}</div>
+        <div class="stat-label">Lost</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">{{ stats.pendingBets }}</div>
+        <div class="stat-label">Pending</div>
+      </div>
+      <div class="stat-card">
+        <div class="stat-value">£{{ stats.totalStaked | number:'1.2-2' }}</div>
+        <div class="stat-label">Total Staked</div>
+      </div>
+    </div>
+
+    <!-- Bankroll Chart -->
+    <div class="chart-card" *ngIf="stats.bankrollHistory.length > 1">
+      <h3>Bankroll History</h3>
+      <canvas baseChart [data]="chartData" [options]="chartOptions" type="line"></canvas>
+    </div>
+
+    <!-- Quick Actions -->
+    <div class="quick-actions">
+      <a routerLink="/matches" class="btn btn-primary">Browse Matches</a>
+      <a routerLink="/bets" class="btn btn-secondary">My Bets</a>
+    </div>
+  </ng-container>
+</div>

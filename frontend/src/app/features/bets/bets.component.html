@@ -1,0 +1,37 @@
+<div class="page-container">
+  <div class="page-header">
+    <h1>My Bets</h1>
+    <div class="summary-badges">
+      <span class="badge">Staked: £{{ totalStaked | number:'1.2-2' }}</span>
+      <span class="badge" [class.profit]="totalPL >= 0" [class.loss]="totalPL < 0">
+        P&L: {{ totalPL >= 0 ? '+' : '' }}£{{ totalPL | number:'1.2-2' }}
+      </span>
+    </div>
+  </div>
+
+  <div *ngIf="loading" class="loading">Loading bets...</div>
+
+  <div class="bets-list" *ngIf="!loading">
+    <div *ngFor="let bet of bets" class="bet-card" [class]="'bet-' + bet.status.toLowerCase()">
+      <div class="bet-header">
+        <span class="bet-type">{{ bet.betType | titlecase }}</span>
+        <span class="bet-status status-badge" [class]="'status-' + bet.status.toLowerCase()">{{ bet.status }}</span>
+      </div>
+      <div class="bet-details">
+        <div>Stake: <strong>£{{ bet.stake | number:'1.2-2' }}</strong></div>
+        <div>Odds: <strong>{{ bet.odds }}</strong></div>
+        <div>Potential Win: <strong>£{{ bet.potentialWin | number:'1.2-2' }}</strong></div>
+        <div *ngIf="bet.profitLoss != null" [class.profit]="bet.profitLoss >= 0" [class.loss]="bet.profitLoss < 0">
+          P&L: <strong>{{ bet.profitLoss >= 0 ? '+' : '' }}£{{ bet.profitLoss | number:'1.2-2' }}</strong>
+        </div>
+      </div>
+      <div class="bet-footer">
+        <small>{{ bet.placedAt | date:'dd MMM yyyy HH:mm' }}</small>
+      </div>
+    </div>
+
+    <div *ngIf="bets.length === 0" class="empty-state">
+      No bets placed yet. Browse matches to get started!
+    </div>
+  </div>
+</div>
