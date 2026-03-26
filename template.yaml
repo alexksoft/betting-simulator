@@ -1,6 +1,6 @@
 AWSTemplateFormatVersion: '2010-09-09'
 Transform: AWS::Serverless-2016-10-31
-Description: Betting Simulator - Serverless Backend
+Description: Betting Simulator - Serverless Backend v2
 
 Globals:
   Function:
@@ -20,7 +20,7 @@ Resources:
     Properties:
       FunctionName: betting-simulator-api
       Handler: com.bettingsim.LambdaHandler
-      CodeUri: backend/target/betting-simulator-backend-1.0.0.jar
+      CodeUri: backend/
       Policies:
         - DynamoDBCrudPolicy:
             TableName: !Ref UsersTable
@@ -37,6 +37,12 @@ Resources:
             RestApiId: !Ref BettingApi
             Path: /{proxy+}
             Method: ANY
+        ApiOptions:
+          Type: Api
+          Properties:
+            RestApiId: !Ref BettingApi
+            Path: /{proxy+}
+            Method: OPTIONS
 
   # ─── API Gateway ───────────────────────────────────────────────────────────
   BettingApi:
