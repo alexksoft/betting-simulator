@@ -4,7 +4,7 @@ import { FormsModule } from '@angular/forms';
 import { MatchService } from '../../core/services/match.service';
 import { BetService } from '../../core/services/bet.service';
 import { AuthService } from '../../core/services/auth.service';
-import { Match, MatchRequest } from '../../core/models/models';
+import { Match, MatchRequest, PublicBet, MatchStats } from '../../core/models/models';
 
 @Component({
   selector: 'app-matches',
@@ -19,6 +19,12 @@ export class MatchesComponent implements OnInit {
   showCreateForm = false;
   selectedMatch: Match | null = null;
   message = '';
+  
+  // New properties for public bets and stats
+  publicBets: PublicBet[] = [];
+  matchStats: MatchStats | null = null;
+  loadingBets = false;
+  showBetsSection = false;
 
   newMatch: MatchRequest = { sport: '', homeTeam: '', awayTeam: '', startTime: '', oddsHome: undefined, oddsDraw: undefined, oddsAway: undefined };
   betStake = 10;
@@ -64,6 +70,41 @@ export class MatchesComponent implements OnInit {
     this.betType = 'HOME_WIN';
     this.betStake = 10;
     this.customOdds = null;
+    this.showBetsSection = false;
+    
+    // Load public bets and stats for the selected match
+    if (this.selectedMatch) {
+      this.loadMatchBetsAndStats(match.matchId);
+    } else {
+      this.publicBets = [];
+      this.matchStats = null;
+    }
+  }
+
+  loadMatchBetsAndStats(matchId: string) {
+    this.loadingBets = true;
+    
+    // Load public bets
+    this.betService.getPublicMatchBets(matchId).subscribe({
+      next: (bets) => {
+        this.publicBets = bets;
+        this.loadingBets = false;
+      },
+      error: () => {
+        this.publicBets = [];
+        this.loadingBets = false;
+      }
+    });
+    
+    // Load match statistics
+    this.betService.getMatchStats(matchId).subscribe({
+      next: (stats) => this.matchStats = stats,
+      error: () => this.matchStats = null
+    });
+  }
+
+  toggleBetsSection() {
+    this.showBetsSection = !this.showBetsSection;
   }
 
   getOddsForType(match: Match): number {
@@ -84,11 +125,75 @@ export class MatchesComponent implements OnInit {
     this.betService.place({ matchId: this.selectedMatch.matchId, betType: this.betType, stake: this.betStake, odds }).subscribe({
       next: () => {
         this.message = `Bet placed! Potential win: £${(this.betStake * odds).toFixed(2)}`;
-        this.selectedMatch = null;
         const user = this.auth.currentUser$.value;
         if (user) this.auth.updateBankroll(user.bankroll - this.betStake);
+        
+        // Reload bets and stats after placing a bet
+        if (this.selectedMatch) {
+          this.loadMatchBetsAndStats(this.selectedMatch.matchId);
+        }
       },
       error: (e) => this.message = e.error?.error || 'Failed to place bet'
     });
+  }
+
+  getBetTypeLabel(betType: string, match: Match): string {
+    switch (betType) {
+      case 'HOME_WIN': return match.homeTeam;
+      case 'AWAY_WIN': return match.awayTeam;
+      case 'DRAW': return 'Draw';
+      default: return betType;
+    }
+  }
+
+  getStatusBadgeClass(status: string): string {
+    return `status-badge status-${status.toLowerCase()}`;
+  }
+
+  getBetStatusClass(status: string): string {
+    switch (status) {
+      case 'WON': return 'bet-won';
+      case 'LOST': return 'bet-lost';
+      case 'PENDING': return 'bet-pending';
+      default: return '';
+    }
+  }
+
+  getUkrainianTime(dateString: string): string {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('uk-UA', {
+        timeZone: 'Europe/Kiev',
+        day: '2-digit',
+        month: 'short',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return dateString;
+    }
+  }
+
+  getMatchStatus(match: Match): string {
+    if (match.result) {
+      return 'FINISHED';
+    }
+
+    try {
+      const now = new Date();
+      const startTime = new Date(match.startTime);
+      const timeDiff = startTime.getTime() - now.getTime();
+      const minutesDiff = timeDiff / (1000 * 60);
+
+      if (minutesDiff < -120) {
+        return 'FINISHED';
+      } else if (minutesDiff <= 0) {
+        return 'LIVE';
+      } else {
+        return 'UPCOMING';
+      }
+    } catch (error) {
+      return match.status;
+    }
   }
 }

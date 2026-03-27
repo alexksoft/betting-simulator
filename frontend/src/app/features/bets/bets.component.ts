@@ -24,4 +24,20 @@ export class BetsComponent implements OnInit {
 
   get totalStaked() { return this.bets.reduce((s, b) => s + b.stake, 0); }
   get totalPL() { return this.bets.filter(b => b.profitLoss != null).reduce((s, b) => s + (b.profitLoss ?? 0), 0); }
+
+  getUkrainianTime(dateString: string): string {
+    try {
+      const date = new Date(dateString);
+      return date.toLocaleString('uk-UA', {
+        timeZone: 'Europe/Kiev',
+        day: '2-digit',
+        month: 'short',
+        year: 'numeric',
+        hour: '2-digit',
+        minute: '2-digit'
+      });
+    } catch (error) {
+      return dateString;
+    }
+  }
 }

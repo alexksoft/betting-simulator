@@ -32,8 +32,16 @@ public class BetRepository {
     }
 
     public List<Bet> findByMatchId(String matchId) {
-        return table.scan().items().stream()
-                .filter(b -> matchId.equals(b.getMatchId()))
-                .toList();
+        try {
+            // Try to use GSI first
+            DynamoDbIndex<Bet> index = table.index("matchId-index");
+            return index.query(QueryConditional.keyEqualTo(Key.builder().partitionValue(matchId).build()))
+                    .stream().flatMap(p -> p.items().stream()).toList();
+        } catch (Exception e) {
+            // Fall back to table scan if GSI doesn't exist
+            return table.scan().items().stream()
+                    .filter(b -> matchId.equals(b.getMatchId()))
+                    .toList();
+        }
     }
 }

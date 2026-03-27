@@ -1,6 +1,8 @@
 package com.bettingsim.service;
 
 import com.bettingsim.dto.BetRequest;
+import com.bettingsim.dto.PublicBetResponse;
+import com.bettingsim.dto.MatchStatsResponse;
 import com.bettingsim.exception.AppException;
 import com.bettingsim.model.Bet;
 import com.bettingsim.model.BankrollHistory;
@@ -72,6 +74,57 @@ public class BetService {
 
     public List<Bet> getUserBets(String userId) {
         return betRepository.findByUserId(userId);
+    }
+
+    public List<Bet> getMatchBets(String matchId) {
+        return betRepository.findByMatchId(matchId);
+    }
+
+    public List<PublicBetResponse> getPublicMatchBets(String matchId) {
+        List<Bet> bets = betRepository.findByMatchId(matchId);
+        return bets.stream().map(this::convertToPublicBet).toList();
+    }
+
+    public MatchStatsResponse getMatchStats(String matchId) {
+        List<Bet> bets = betRepository.findByMatchId(matchId);
+        
+        MatchStatsResponse stats = new MatchStatsResponse();
+        stats.setMatchId(matchId);
+        stats.setTotalBets(bets.size());
+        stats.setTotalStaked(bets.stream().map(Bet::getStake).reduce(BigDecimal.ZERO, BigDecimal::add));
+        
+        stats.setHomeBets((int) bets.stream().filter(b -> "HOME_WIN".equals(b.getBetType())).count());
+        stats.setDrawBets((int) bets.stream().filter(b -> "DRAW".equals(b.getBetType())).count());
+        stats.setAwayBets((int) bets.stream().filter(b -> "AWAY_WIN".equals(b.getBetType())).count());
+        
+        stats.setHomeStaked(bets.stream().filter(b -> "HOME_WIN".equals(b.getBetType()))
+                .map(Bet::getStake).reduce(BigDecimal.ZERO, BigDecimal::add));
+        stats.setDrawStaked(bets.stream().filter(b -> "DRAW".equals(b.getBetType()))
+                .map(Bet::getStake).reduce(BigDecimal.ZERO, BigDecimal::add));
+        stats.setAwayStaked(bets.stream().filter(b -> "AWAY_WIN".equals(b.getBetType()))
+                .map(Bet::getStake).reduce(BigDecimal.ZERO, BigDecimal::add));
+        
+        return stats;
+    }
+
+    private PublicBetResponse convertToPublicBet(Bet bet) {
+        PublicBetResponse publicBet = new PublicBetResponse();
+        publicBet.setBetId(bet.getBetId());
+        
+        // Get real username instead of anonymizing
+        String username = userRepository.findById(bet.getUserId())
+                .map(user -> user.getUsername())
+                .orElse("Unknown User");
+        publicBet.setUsername(username);
+        
+        publicBet.setBetType(bet.getBetType());
+        publicBet.setStake(bet.getStake());
+        publicBet.setOdds(bet.getOdds());
+        publicBet.setPotentialWin(bet.getPotentialWin());
+        publicBet.setStatus(bet.getStatus());
+        publicBet.setPlacedAt(bet.getPlacedAt());
+        publicBet.setProfitLoss(bet.getProfitLoss());
+        return publicBet;
     }
 
     public void settleBetsForMatch(String matchId, String matchResult) {

@@ -110,6 +110,8 @@ Resources:
           AttributeType: S
         - AttributeName: placedAt
           AttributeType: S
+        - AttributeName: matchId
+          AttributeType: S
       KeySchema:
         - AttributeName: betId
           KeyType: HASH
@@ -117,6 +119,14 @@ Resources:
         - IndexName: userId-index
           KeySchema:
             - AttributeName: userId
+              KeyType: HASH
+            - AttributeName: placedAt
+              KeyType: RANGE
+          Projection:
+            ProjectionType: ALL
+        - IndexName: matchId-index
+          KeySchema:
+            - AttributeName: matchId
               KeyType: HASH
             - AttributeName: placedAt
               KeyType: RANGE

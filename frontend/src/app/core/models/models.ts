@@ -76,3 +76,27 @@ export interface UserStats {
   currentBankroll: number;
   bankrollHistory: BankrollPoint[];
 }
+
+export interface PublicBet {
+  betId: string;
+  username: string;
+  betType: 'HOME_WIN' | 'DRAW' | 'AWAY_WIN';
+  stake: number;
+  odds: number;
+  potentialWin: number;
+  status: 'PENDING' | 'WON' | 'LOST' | 'VOID';
+  profitLoss?: number;
+  placedAt: string;
+}
+
+export interface MatchStats {
+  matchId: string;
+  totalBets: number;
+  totalStaked: number;
+  homeBets: number;
+  drawBets: number;
+  awayBets: number;
+  homeStaked: number;
+  drawStaked: number;
+  awayStaked: number;
+}

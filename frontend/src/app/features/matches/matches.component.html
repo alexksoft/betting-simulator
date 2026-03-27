@@ -18,7 +18,7 @@
           <input [(ngModel)]="newMatch.sport" name="sport" required placeholder="Football" />
         </div>
         <div class="form-group">
-          <label>Start Time</label>
+          <label>Start Time (Ukraine Time)</label>
           <input type="datetime-local" [(ngModel)]="newMatch.startTime" name="startTime" required />
         </div>
       </div>
@@ -71,8 +71,8 @@
           <strong>{{ match.homeTeam }} vs {{ match.awayTeam }}</strong>
         </div>
         <div class="match-meta">
-          <span class="status-badge" [class]="'status-' + match.status.toLowerCase()">{{ match.status }}</span>
-          <span class="match-time">{{ match.startTime | date:'dd MMM HH:mm' }}</span>
+          <span class="status-badge" [class]="'status-' + getMatchStatus(match).toLowerCase()">{{ getMatchStatus(match) }}</span>
+          <span class="match-time">{{ getUkrainianTime(match.startTime) }}</span>
         </div>
       </div>
 
@@ -98,7 +98,7 @@
       </div>
 
       <!-- Bet Slip -->
-      <div class="bet-slip" *ngIf="selectedMatch?.matchId === match.matchId && match.status !== 'FINISHED'">
+      <div class="bet-slip" *ngIf="selectedMatch?.matchId === match.matchId && getMatchStatus(match) !== 'FINISHED'">
         <h4>Place Bet</h4>
         <div class="form-row">
           <div class="form-group">
@@ -125,6 +125,80 @@
         <button class="btn btn-success" (click)="placeBet()" [disabled]="!effectiveOdds() || effectiveOdds() <= 1">
           Place Bet
         </button>
+      </div>
+
+      <!-- Match Statistics and Public Bets -->
+      <div class="match-details" *ngIf="selectedMatch?.matchId === match.matchId">
+        <!-- Match Statistics -->
+        <div class="match-stats" *ngIf="matchStats">
+          <h4>Betting Statistics</h4>
+          <div class="stats-grid">
+            <div class="stat-item">
+              <span class="stat-label">Total Bets</span>
+              <span class="stat-value">{{ matchStats.totalBets }}</span>
+            </div>
+            <div class="stat-item">
+              <span class="stat-label">Total Staked</span>
+              <span class="stat-value">£{{ matchStats.totalStaked | number:'1.2-2' }}</span>
+            </div>
+          </div>
+          <div class="outcome-stats">
+            <div class="outcome-item">
+              <span class="outcome-label">{{ match.homeTeam }}</span>
+              <span class="outcome-count">{{ matchStats.homeBets }} bets</span>
+              <span class="outcome-stake">£{{ matchStats.homeStaked | number:'1.2-2' }}</span>
+            </div>
+            <div class="outcome-item">
+              <span class="outcome-label">Draw</span>
+              <span class="outcome-count">{{ matchStats.drawBets }} bets</span>
+              <span class="outcome-stake">£{{ matchStats.drawStaked | number:'1.2-2' }}</span>
+            </div>
+            <div class="outcome-item">
+              <span class="outcome-label">{{ match.awayTeam }}</span>
+              <span class="outcome-count">{{ matchStats.awayBets }} bets</span>
+              <span class="outcome-stake">£{{ matchStats.awayStaked | number:'1.2-2' }}</span>
+            </div>
+          </div>
+        </div>
+
+        <!-- Public Bets Section -->
+        <div class="public-bets-section">
+          <div class="section-header">
+            <h4>Community Bets</h4>
+            <button class="btn btn-secondary btn-sm" (click)="toggleBetsSection()">
+              {{ showBetsSection ? 'Hide' : 'Show' }} Bets ({{ publicBets.length }})
+            </button>
+          </div>
+          
+          <div class="public-bets" *ngIf="showBetsSection">
+            <div *ngIf="loadingBets" class="loading-bets">Loading bets...</div>
+            
+            <div *ngIf="!loadingBets && publicBets.length === 0" class="no-bets">
+              No bets placed on this match yet.
+            </div>
+            
+            <div *ngIf="!loadingBets && publicBets.length > 0" class="bets-list">
+              <div *ngFor="let bet of publicBets" class="bet-item" [ngClass]="getBetStatusClass(bet.status)">
+                <div class="bet-header">
+                  <span class="bet-user">{{ bet.username }}</span>
+                  <span class="bet-time">{{ getUkrainianTime(bet.placedAt) }}</span>
+                  <span class="bet-status" [ngClass]="getBetStatusClass(bet.status)">{{ bet.status }}</span>
+                </div>
+                <div class="bet-details">
+                  <span class="bet-selection">{{ getBetTypeLabel(bet.betType, match) }}</span>
+                  <span class="bet-stake">£{{ bet.stake | number:'1.2-2' }}</span>
+                  <span class="bet-odds">&#64; {{ bet.odds }}</span>
+                  <span class="bet-potential">£{{ bet.potentialWin | number:'1.2-2' }}</span>
+                </div>
+                <div class="bet-result" *ngIf="bet.profitLoss !== null && bet.profitLoss !== undefined">
+                  <span [ngClass]="bet.profitLoss >= 0 ? 'profit' : 'loss'">
+                    {{ bet.profitLoss >= 0 ? '+' : '' }}£{{ bet.profitLoss | number:'1.2-2' }}
+                  </span>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
